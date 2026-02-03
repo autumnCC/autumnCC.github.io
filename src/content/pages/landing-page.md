@@ -1,6 +1,6 @@
 ---
 title: "Visen Film"
 subtitle: "Film photography archive"
-pageTitle: "Your name Film Photography"
+pageTitle: "Visen Film Photography"
 seoDescription: "A personal archive of film photos and film rolls by Your name."
 --- 

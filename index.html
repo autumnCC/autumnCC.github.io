@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FilmTag 胶片分类清单</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 头部样式 */
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #f39c12, #e74c3c, #9b59b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* 统计卡片 */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .stat-card.total .number { color: #3498db; }
+        .stat-card.color .number { color: #e74c3c; }
+        .stat-card.bw .number { color: #95a5a6; }
+        .stat-card.slide .number { color: #9b59b6; }
+
+        /* 完整清单 */
+        .complete-list {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .complete-list h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .film-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .film-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: transform 0.2s, background 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .film-item:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .film-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .film-item .index {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.3);
+            min-width: 30px;
+        }
+
+        .film-item .name {
+            flex: 1;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .film-item .type {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .type.color { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .type.bw { background: rgba(149, 165, 166, 0.2); color: #95a5a6; }
+        .type.slide { background: rgba(155, 89, 182, 0.2); color: #9b59b6; }
+
+        .film-item .iso {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* 胶片预览图片样式 */
+        .film-preview {
+            width: 100%;
+            max-width: 320px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            align-self: center;
+            display: block;
+            transition: transform 0.2s;
+        }
+
+        .film-item:hover .film-preview {
+            transform: scale(1.03);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 40px;
+        }
+
+        /* 响应式 - 平板 */
+        @media (max-width: 1024px) {
+            .film-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+            
+            .stats {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+
+        /* 响应式 - 手机 */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { padding: 25px 0; margin-bottom: 25px; }
+            .header h1 { font-size: 1.8rem; }
+            .header .subtitle { font-size: 1rem; }
+            .stats { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 25px; }
+            .stat-card { padding: 15px 10px; border-radius: 12px; }
+            .stat-card .number { font-size: 1.8rem; }
+            .stat-card .label { font-size: 0.85rem; }
+            .film-grid { grid-template-columns: 1fr; gap: 15px; }
+            .film-item { padding: 15px; }
+            .complete-list { padding: 20px 15px; border-radius: 15px; }
+            .complete-list h2 { font-size: 1.4rem; }
+            .film-preview { max-width: 280px; }
+        }
+
+        /* 超小屏幕优化 */
+        @media (max-width: 480px) {
+            .header h1 { font-size: 1.5rem; }
+            .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card .number { font-size: 1.5rem; }
+            .stat-card .label { font-size: 0.75rem; }
+            .film-preview { max-width: 240px; }
+            .film-item .name { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <h1>🎞️ FilmTag 胶片分类清单</h1>
+            <p class="subtitle">28款经典胶卷，一次览尽</p>
+        </header>
+
+        <!-- 统计卡片 -->
+        <section class="stats">
+            <div class="stat-card total">
+                <div class="number">28</div>
+                <div class="label">总计胶片</div>
+            </div>
+            <div class="stat-card color">
+                <div class="number">17</div>
+                <div class="label">彩色负片</div>
+            </div>
+            <div class="stat-card bw">
+                <div class="number">9</div>
+                <div class="label">黑白胶片</div>
+            </div>
+            <div class="stat-card slide">
+                <div class="number">2</div>
+                <div class="label">正片/反转片</div>
+            </div>
+        </section>
+
+        <!-- 完整清单 -->
+        <section class="complete-list">
+            <h2>📋 完整清单（按字母排序）</h2>
+            <div class="film-grid">
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">01</span>
+                        <span class="name">FomaPan-100</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 100</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/FomaPan-100.png" alt="FomaPan-100标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">02</span>
+                        <span class="name">FomaPan-200</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 200</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/FomaPan-200.png" alt="FomaPan-200标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">03</span>
+                        <span class="name">FomaPan-400</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 400</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/FomaPan-400.png" alt="FomaPan-400标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">04</span>
+                        <span class="name">FomaPan-R-100</span>
+                        <span class="type slide">反转片</span>
+                        <span class="iso">ISO 100</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/FomaPan-R-100.png" alt="FomaPan-R-100标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">05</span>
+                        <span class="name">Fuji-Veleia-100</span>
+                        <span class="type slide">正片</span>
+                        <span class="iso">ISO 100</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Fuji-Veleia-100.png" alt="Fuji-Veleia-100标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">06</span>
+                        <span class="name">Fuji-Veleia-50</span>
+                        <span class="type slide">正片</span>
+                        <span class="iso">ISO 50</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Fuji-Veleia-50.png" alt="Fuji-Veleia-50标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">07</span>
+                        <span class="name">Kairui-100</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 100</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kairui-100.png" alt="Kairui-100标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">08</span>
+                        <span class="name">Kairui-400</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 400</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kairui-400.png" alt="Kairui-400标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">09</span>
+                        <span class="name">Kodak-5203</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 50</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-5203.png" alt="Kodak-5203标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">10</span>
+                        <span class="name">Kodak-5207</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 250</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-5207.png" alt="Kodak-5207标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">11</span>
+                        <span class="name">Kodak-5213</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 200</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-5213.png" alt="Kodak-5213标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">12</span>
+                        <span class="name">Kodak-5219</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 500</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-5219.png" alt="Kodak-5219标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">13</span>
+                        <span class="name">Kodak-5294</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 250</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-5294.png" alt="Kodak-5294标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">14</span>
+                        <span class="name">Kodak-CP-200</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 200</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-CP-200.png" alt="Kodak-CP-200标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">15</span>
+                        <span class="name">Kodak-E100</span>
+                        <span class="type slide">正片</span>
+                        <span class="iso">ISO 100</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-E100.png" alt="Kodak-E100标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">16</span>
+                        <span class="name">Kodak-E100-2</span>
+                        <span class="type slide">正片</span>
+                        <span class="iso">ISO 100</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-E100-2.png" alt="Kodak-E100-2标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">17</span>
+                        <span class="name">Kodak-Ektar-100</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 100</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-Ektar-100.png" alt="Kodak-Ektar-100标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">18</span>
+                        <span class="name">Kodak-Gold-200</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 200</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-Gold-200.png" alt="Kodak-Gold-200标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">19</span>
+                        <span class="name">Kodak-Portra-160</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 160</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-Portra-160.png" alt="Kodak-Portra-160标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">20</span>
+                        <span class="name">Kodak-Portra-400</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 400</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-Portra-400.png" alt="Kodak-Portra-400标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">21</span>
+                        <span class="name">Kodak-Portra-800</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 800</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-Portra-800.png" alt="Kodak-Portra-800标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">22</span>
+                        <span class="name">Kodak-TMAX-3200</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 3200</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-TMAX-3200.png" alt="Kodak-TMAX-3200标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">23</span>
+                        <span class="name">Kodak-TMAX-400</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 400</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-TMAX-400.png" alt="Kodak-TMAX-400标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">24</span>
+                        <span class="name">Kodak-TX-400</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 400</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-TX-400.png" alt="Kodak-TX-400标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">25</span>
+                        <span class="name">Kodak-UM-400</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 400</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Kodak-UM-400.png" alt="Kodak-UM-400标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">26</span>
+                        <span class="name">Lucky-C200</span>
+                        <span class="type color">彩负</span>
+                        <span class="iso">ISO 200</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/Lucky-C200.png" alt="Lucky-C200标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">27</span>
+                        <span class="name">SHD-100</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 100</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/SHD-100.png" alt="SHD-100标签">
+                </div>
+                <div class="film-item">
+                    <div class="film-info">
+                        <span class="index">28</span>
+                        <span class="name">SHD-400</span>
+                        <span class="type bw">黑白</span>
+                        <span class="iso">ISO 400</span>
+                    </div>
+                    <img class="film-preview" src="FilmTag-main/135-4x3.7-PNG/SHD-400.png" alt="SHD-400标签">
+                </div>
+            </div>
+        </section>
+
+        <!-- 页脚 -->
+        <footer class="footer">
+            <p>生成时间: 2026-02-03 | 数据来源: FilmTag 项目文件</p>
+        </footer>
+    </div>
+</body>
+</html>
